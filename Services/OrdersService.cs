@@ -5,6 +5,11 @@ using System.Threading.Tasks;
 using EcommerceAPI.DTOs;
 using EcommerceAPI.Models;
 using EcommerceAPI.Repositories;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Storage.Json;
+using Newtonsoft.Json;
+using PaymentsApi.DTOs;
 
 namespace EcommerceAPI.Services
 {
@@ -54,14 +59,14 @@ namespace EcommerceAPI.Services
 
         public async Task<Product> ReduceStock(OrderItemDTO item)
         {
-            Product product = await _productRepository.GetById(item.product_id);
+            Product product  = await _productRepository.GetById(item.product_id);
             var reducedStock = await _productRepository.ReduceStock(product, item.quantity);
             return reducedStock;
         }
 
         public async Task<Product> RestoreStock(OrderItemDTO item)
         {
-            Product product = await _productRepository.GetById(item.product_id);
+            Product product   = await _productRepository.GetById(item.product_id);
             var restoredStock = await _productRepository.RestoreStock(product, item.quantity);
             return restoredStock;
         }
@@ -71,17 +76,53 @@ namespace EcommerceAPI.Services
             return price * quantity;
         }
 
-        
+        public async Task<string> AutenticatePayment(HttpClient httpClient, string apiKey)
+        {
+            var apiKeyDTO = new ApiKeyDTO
+            {
+                api_key = apiKey
+            };
+            string url = "http://localhost:5087/api/v1/Autenticate";
+            // httpClient.DefaultRequestHeaders.Add("api_key", apiKey.api_key);
+            if (string.IsNullOrEmpty(apiKeyDTO.api_key))
+            {
+                return null;
+            }
 
-        // public async Task<Product> ReduceStock(Product product, int quantity)
-        // {
-        //    var productUpdated = await _productRepository.ReduceStock(product, quantity);
-        //    return productUpdated;
-        // }
+            var jsonContent = JsonConvert.SerializeObject(apiKeyDTO);
+            var content     = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
-        // public async Task<Product> GetProductById(int id)
-        // {
-        //     return await _productRepository.GetById(id);
-        // }
+            var response = await httpClient.PostAsync(url, content);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+            var responseBody = await response.Content.ReadAsStringAsync();
+            // Console.WriteLine(responseBody);
+            if (responseBody is null)
+            {
+                return null;
+            }
+            return responseBody;
+        }
+
+        public async Task<string> Pay(HttpClient httpClient, PayDTO paymentInfo, string api_key, string token)
+        {
+            string url = "http://localhost:5087/api/v1/Payment/pay";
+            httpClient.DefaultRequestHeaders.Remove("api_key");
+            httpClient.DefaultRequestHeaders.Add("api_key", api_key);
+            httpClient.DefaultRequestHeaders.Add("auth", token);
+
+            var jsonContent = JsonConvert.SerializeObject(paymentInfo);
+            var content     = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            HttpResponseMessage response = await httpClient.PostAsync(url, content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return response.ReasonPhrase;
+            }
+            var responseData = await response.Content.ReadAsStringAsync();
+            return responseData;
+        }
     }
 }

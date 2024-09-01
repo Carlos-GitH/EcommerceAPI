@@ -31,12 +31,14 @@ builder.Services.AddScoped<ClientsService>();
 builder.Services.AddScoped<CartItemsService>();
 builder.Services.AddScoped<SellersService>();
 
+builder.Services.AddHttpClient();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
-app.UseMiddleware<AuthorizationMiddleware>();
+// app.UseMiddleware<AuthorizationMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -11,8 +11,8 @@ namespace EcommerceAPI.Controllers
     [ApiController]
     [Route("/api/v1/orders")]
     [LogActionFilter()]
-    [TypeFilter(typeof(AsyncAuthorizeActionFilter))]
-    [TypeFilter(typeof(SellerAuthorizeActionFilter))]
+    // [TypeFilter(typeof(AsyncAuthorizeActionFilter))]
+    // [TypeFilter(typeof(SellerAuthorizeActionFilter))]
     public class OrdersControllers : ControllerBase
     {
         private readonly OrdersRepository _orderRepository;
@@ -30,7 +30,7 @@ namespace EcommerceAPI.Controllers
         [HttpGet("")]
         public async Task<ActionResult <IEnumerable<Order>>> GetAll()
         {
-            var orders          =  await _orderRepository.GetAll();
+            var orders          = await _orderRepository.GetAll();
             var ordersWithToken = new GetOrdersDetailedWithTokenDTO
             {
                 orders = orders
@@ -42,7 +42,7 @@ namespace EcommerceAPI.Controllers
         [TypeFilter(typeof(ClientAuthorizeActionFilter))]
         public async Task<ActionResult<IEnumerable<OrderItemDTO>>> GetOrder(int id)
         {
-            var order = await _orderRepository.GetById(id);
+            var order     = await _orderRepository.GetById(id);
             var reference = Request.Headers["reference"];
             if (string.IsNullOrEmpty(reference))
             {
@@ -102,16 +102,24 @@ namespace EcommerceAPI.Controllers
 
         [HttpPost("create")]
         [Consumes("application/json")]
-        [TypeFilter(typeof(ClientAuthorizeActionFilter))]
-        public async Task<ActionResult> CreateOrder([FromBody] CreateOrderDTO createOrderDTO)
+        // [TypeFilter(typeof(ClientAuthorizeActionFilter))]
+        public async Task<ActionResult> CreateOrder([FromBody] CreateOrderDTO createOrderDTO, HttpClient httpClient)
         {
-            var reference = Request.Headers["reference"];
-            if (string.IsNullOrEmpty(reference))
-            {
-                var headerId = Request.Headers["id"];
-                if (!_clientService.ValidateProprietaryClient(headerId, createOrderDTO.client_id)) return Unauthorized("Unauthorized");
-            }
+            string apiKey    = Request.Headers["api_key"];
+            var paymentToken = await _orderService.AutenticatePayment(httpClient, apiKey);
+            if (paymentToken == null) return Unauthorized("Unauthorized, token missing or invalid");
+            
+            // var reference = Request.Headers["reference"];
+            // if (string.IsNullOrEmpty(reference))
+            // {
+            //     var headerId = Request.Headers["id"];
+            //     if (!_clientService.ValidateProprietaryClient(headerId, createOrderDTO.client_id)) return Unauthorized("Unauthorized");
+            // }
             decimal totalPrice = 0;
+            createOrderDTO.payment_info.value = totalPrice;
+            var teste = await _orderService.Pay(httpClient, createOrderDTO.payment_info, apiKey, paymentToken);
+
+            
             foreach (var item in createOrderDTO.items)
             {
                 var price = await _orderService.VerifyStock(item);
@@ -144,7 +152,8 @@ namespace EcommerceAPI.Controllers
                 seller_name   = orderToReturn.seller_name,
                 order_items   = orderToReturn.order_items
             };
-            orderToReturnDTO.token = await _tokenService.GenerateAndSaveToken();
+            
+            // orderToReturnDTO.token = await _tokenService.GenerateAndSaveToken();
             return Ok(orderToReturnDTO);
         }
 
