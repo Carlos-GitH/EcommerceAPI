@@ -10,6 +10,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Storage.Json;
 using Newtonsoft.Json;
 using PaymentsApi.DTOs;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Storage.Json;
+using Newtonsoft.Json;
+using PaymentsApi.DTOs;
 
 namespace EcommerceAPI.Services
 {
@@ -66,7 +71,7 @@ namespace EcommerceAPI.Services
 
         public async Task<Product> RestoreStock(OrderItemDTO item)
         {
-            Product product   = await _productRepository.GetById(item.product_id);
+            Product product     = await _productRepository.GetById(item.product_id);
             var restoredStock = await _productRepository.RestoreStock(product, item.quantity);
             return restoredStock;
         }

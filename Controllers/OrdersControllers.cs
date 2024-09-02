@@ -107,6 +107,7 @@ namespace EcommerceAPI.Controllers
         {
             string apiKey    = Request.Headers["api_key"];
             var paymentToken = await _orderService.AutenticatePayment(httpClient, apiKey);
+            if (paymentToken == null) return Unauthorized("Unauthorized, token missing or invalid");
             // var reference = Request.Headers["reference"];
             // if (string.IsNullOrEmpty(reference))
             // {
