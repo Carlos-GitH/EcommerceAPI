@@ -14,6 +14,7 @@ namespace EcommerceAPI.DTOs
         public string delivery_type { get; set; }
         public string order_status { get; set; } = "pending confirmation";
         public decimal total_price { get; set; } = 0;
+        public PayDTO payment_info { get; set; }
     }
 
     public class CreatedOrderDTO
